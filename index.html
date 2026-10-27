@@ -1,0 +1,171 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#fff7f8">
+<title>مِداد | Midad</title>
+<style>
+:root{--pink:#c97891;--dark:#513744;--bg:#fff8f9;--card:#fff;--soft:#f7e7ec;--muted:#8d7b83}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--dark);font-family:Arial,Tahoma,sans-serif}
+header{padding:25px 6%;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f0dfe5}
+.logo{font-size:27px;font-weight:bold;color:var(--pink)}
+.logo small{display:block;font-size:11px;letter-spacing:3px;text-align:center}
+main{max-width:1000px;margin:28px auto;padding:0 18px}
+.welcome{background:linear-gradient(130deg,#f5dce5,#fff0f3);padding:27px;border-radius:23px}
+h1{font-size:28px;margin:0 0 10px}
+p{line-height:1.8}
+.muted{color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:20px}
+.card{background:var(--card);border:1px solid #f0e2e7;border-radius:19px;padding:20px;min-width:0}
+h2{font-size:19px;margin:0 0 15px}
+input,select{width:100%;padding:12px;border:1px solid #ead6df;border-radius:11px;background:#fff;color:var(--dark);font-size:15px;margin-bottom:9px}
+button{border:0;background:var(--pink);color:white;padding:11px 15px;border-radius:11px;font-size:14px;cursor:pointer}
+button:focus,input:focus{outline:2px solid #dba1b3;outline-offset:2px}
+.task{display:flex;align-items:center;gap:9px;padding:11px 0;border-bottom:1px solid #f3e9ed;overflow-wrap:anywhere}
+.task input{width:auto;margin:0;accent-color:var(--pink)}
+.task.done span{text-decoration:line-through;color:#a99aa0}
+.task button{margin-right:auto;padding:6px 9px;background:#f4e5ea;color:var(--dark)}
+.timer{text-align:center;font-size:42px;font-weight:bold;margin:20px 0;color:var(--pink)}
+.actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.actions button.secondary{background:var(--soft);color:var(--dark)}
+footer{text-align:center;padding:28px;color:var(--muted);font-size:13px}
+@media(max-width:600px){.grid{grid-template-columns:1fr}header{padding:20px}.welcome{padding:22px}h1{font-size:24px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">مِداد <small>MIDAD</small></div>
+  <span>مساحتك للإنجاز ✿</span>
+</header>
+<main>
+  <section class="welcome">
+    <p>بسم الله نبدأ</p>
+    <h1>أهلًا بكِ في مِداد 🌷</h1>
+    <p>كل خطوة صغيرة تكتب إنجازًا جديدًا.</p>
+    <p id="today" class="muted"></p>
+  </section>
+
+  <div class="grid">
+    <section class="card">
+      <h2>📚 مهامي الدراسية</h2>
+      <form id="taskForm">
+        <input id="taskInput" placeholder="اكتبي مهمة جديدة..." maxlength="120" required>
+        <button type="submit">+ أضيفي مهمة</button>
+      </form>
+      <p class="muted" id="progress">لم تنجزي أي مهام بعد.</p>
+      <div id="tasks"></div>
+    </section>
+
+    <section class="card">
+      <h2>⏳ جلسة المذاكرة</h2>
+      <p class="muted">ركّزي على مهمة واحدة لمدة 25 دقيقة.</p>
+      <div class="timer" id="timer">25:00</div>
+      <div class="actions">
+        <button id="start">ابدئي</button>
+        <button class="secondary" id="pause">إيقاف مؤقت</button>
+        <button class="secondary" id="reset">إعادة</button>
+      </div>
+      <p id="timerMessage" class="muted" style="text-align:center">أنتِ قادرة على الإنجاز!</p>
+    </section>
+
+    <section class="card">
+      <h2>📝 ملاحظاتي</h2>
+      <textarea id="notes" placeholder="اكتبي ملاحظاتك هنا..." rows="6" style="width:100%;padding:12px;border:1px solid #ead6df;border-radius:12px;font:inherit;resize:vertical"></textarea>
+      <p class="muted" id="saveMessage">تُحفظ الملاحظات على هذا الجهاز تلقائيًا.</p>
+    </section>
+
+    <section class="card">
+      <h2>🎯 هدفي اليوم</h2>
+      <input id="goal" placeholder="ما الذي تريدين إنجازه اليوم؟" maxlength="180">
+      <button id="saveGoal">حفظ الهدف</button>
+      <p id="goalDisplay" class="muted">كل إنجاز يبدأ بهدف واضح.</p>
+    </section>
+  </div>
+</main>
+<footer>مِداد Midad · ابدئي بخطوة، وواصلي بإصرار ♡</footer>
+
+<script>
+const $=id=>document.getElementById(id);
+$("today").textContent=new Intl.DateTimeFormat("ar",{dateStyle:"full"}).format(new Date());
+
+function read(key,fallback){
+ try{const v=localStorage.getItem("midad_"+key);return v===null?fallback:JSON.parse(v)}
+ catch(e){return fallback}
+}
+function save(key,value){
+ try{localStorage.setItem("midad_"+key,JSON.stringify(value));return true}
+ catch(e){return false}
+}
+let tasks=read("tasks",[]);
+function renderTasks(){
+ $("tasks").replaceChildren();
+ tasks.forEach((task,i)=>{
+  const row=document.createElement("div");
+  row.className="task"+(task.done?" done":"");
+  const check=document.createElement("input");
+  check.type="checkbox";check.checked=task.done;
+  check.setAttribute("aria-label","إتمام المهمة");
+  check.addEventListener("change",()=>{
+   tasks[i].done=check.checked;save("tasks",tasks);renderTasks();
+  });
+  const label=document.createElement("span");label.textContent=task.text;
+  const del=document.createElement("button");del.textContent="حذف";
+  del.setAttribute("aria-label","حذف "+task.text);
+  del.addEventListener("click",()=>{
+   tasks.splice(i,1);save("tasks",tasks);renderTasks();
+  });
+  row.append(check,label,del);$("tasks").append(row);
+ });
+ const done=tasks.filter(t=>t.done).length;
+ $("progress").textContent=tasks.length?`أنجزتِ ${done} من ${tasks.length} مهام.`:"لم تنجزي أي مهام بعد.";
+}
+$("taskForm").addEventListener("submit",e=>{
+ e.preventDefault();
+ const text=$("taskInput").value.trim();if(!text)return;
+ tasks.push({text,done:false});save("tasks",tasks);
+ $("taskInput").value="";renderTasks();
+});
+$("notes").value=read("notes","");
+$("notes").addEventListener("input",()=>{
+ $("saveMessage").textContent=save("notes",$("notes").value)?"تم الحفظ على هذا الجهاز ✓":"تعذّر الحفظ؛ انسخي ملاحظاتك للاحتفاظ بها.";
+});
+$("goal").value=read("goal","");
+function renderGoal(){
+ $("goalDisplay").textContent=$("goal").value.trim()||"كل إنجاز يبدأ بهدف واضح.";
+}
+$("saveGoal").addEventListener("click",()=>{
+ save("goal",$("goal").value);renderGoal();
+});
+renderGoal();renderTasks();
+
+let remaining=25*60,interval=null;
+function showTimer(){
+ $("timer").textContent=String(Math.floor(remaining/60)).padStart(2,"0")+":"+String(remaining%60).padStart(2,"0");
+}
+$("start").addEventListener("click",()=>{
+ if(interval!==null)return;
+ $("timerMessage").textContent="أحسنتِ، تابعي تركيزك!";
+ interval=setInterval(()=>{
+  remaining--;showTimer();
+  if(remaining<=0){
+   clearInterval(interval);interval=null;
+   $("timerMessage").textContent="انتهت الجلسة! خذي استراحة قصيرة 🌷";
+  }
+ },1000);
+});
+$("pause").addEventListener("click",()=>{
+ if(interval!==null){clearInterval(interval);interval=null;}
+ $("timerMessage").textContent="الجلسة متوقفة مؤقتًا.";
+});
+$("reset").addEventListener("click",()=>{
+ if(interval!==null)clearInterval(interval);
+ interval=null;remaining=25*60;showTimer();
+ $("timerMessage").textContent="جاهزة لجلسة جديدة؟";
+});
+</script>
+</body>
+          </html>
+          
